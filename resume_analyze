@@ -1,0 +1,68 @@
+import PyPDF2
+import re
+import nltk
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+nltk.download('stopwords')
+
+# ---------- Read Resume PDF ----------
+def read_pdf(file_path):
+    text = ""
+    with open(file_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        for page in reader.pages:
+            text += page.extract_text()
+    return text
+
+
+# ---------- Clean Text ----------
+def clean_text(text):
+    text = re.sub(r'[^a-zA-Z ]', '', text)
+    text = text.lower()
+    words = text.split()
+    words = [w for w in words if w not in stopwords.words('english')]
+    return " ".join(words)
+
+
+# ---------- Skill Extraction ----------
+skills_list = [
+    "python","java","c","c++","machine learning","deep learning","ai",
+    "data science","sql","html","css","javascript","php","react",
+    "communication","teamwork","leadership","nlp","mysql","flask","django"
+]
+
+def extract_skills(text):
+    found_skills = []
+    for skill in skills_list:
+        if skill in text:
+            found_skills.append(skill)
+    return found_skills
+
+
+# ---------- Resume vs Job Description Matching ----------
+def match_resume(resume_text, job_desc):
+    documents = [resume_text, job_desc]
+    tfidf = TfidfVectorizer()
+    vectors = tfidf.fit_transform(documents)
+    similarity = cosine_similarity(vectors[0:1], vectors[1:2])
+    return round(similarity[0][0] * 100, 2)
+
+
+# ---------- MAIN ----------
+resume_path = "resume.pdf"   # put your resume file here
+
+job_description = """
+Looking for a candidate with skills in Python, Machine Learning, SQL,
+AI, Data Science, communication and teamwork.
+"""
+
+resume_text = read_pdf(resume_path)
+clean_resume = clean_text(resume_text)
+
+skills = extract_skills(clean_resume)
+score = match_resume(clean_resume, clean_text(job_description))
+
+print("Extracted Skills:", skills)
+print("Resume Match Percentage:", score, "%")
